@@ -544,6 +544,24 @@ files = [
 ]
 
 [[package]]
+name = "tifffile"
+version = "2023.3.21"
+description = "Read and write TIFF files"
+category = "main"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "tifffile-2023.3.21-py3-none-any.whl", hash = "sha256:b83af3dbe914663aeaf250e9751ae503154f2599dd27ed7a4df1b2dc7c148efa"},
+    {file = "tifffile-2023.3.21.tar.gz", hash = "sha256:16027be65e9d5a1b26bf106a98a639345fecf83ebac9004dc7e617647e4dbfeb"},
+]
+
+[package.dependencies]
+numpy = "*"
+
+[package.extras]
+all = ["defusedxml", "fsspec", "imagecodecs (>=2023.1.23)", "lxml", "matplotlib", "zarr"]
+
+[[package]]
 name = "wcwidth"
 version = "0.2.6"
 description = "Measures the displayed width of unicode strings in a terminal"
@@ -558,4 +576,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "a41092b9752765966d2b4f3446227e67bc75025c3722e6c76af906bb14cc8ad0"
+content-hash = "c283e0fc074651f52e7b479b7bbc8cf66aeaea54a084a4752fb212014f4b6a08"
