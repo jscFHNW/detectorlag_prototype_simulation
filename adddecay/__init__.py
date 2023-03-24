@@ -20,18 +20,24 @@ images_decayed = {}
 images_processed = []
 
 # TODO: pass as command line arguments
-fileprefix = 'wood_'
+prefix_ct = 'wood_'
+prefix_dc = 'wood_'
+prefix_ob = 'wood_'
+
 ct_dir = 'C:\\Users\\Jonathan Schaffner\\FHNW_Projct\\IP5\\SampleData\\Wood\\projections'
 output_base_dir = 'C:\\Users\Jonathan Schaffner\\FHNW_Projct\\IP5\\GeneratedData'
 image_interval_ms = 50
 
+timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+output_dir = Path(os.path.join(output_base_dir, 'AddDecay', timestamp))
+output_decayed = Path(os.path.join(output_dir, 'Decay'))
+output_dir.mkdir(parents=True)
+output_decayed.mkdir(parents=True)
 
-def main():
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    output_dir = Path(os.path.join(output_base_dir, 'AddDecay', timestamp))
-    output_decayed = Path(os.path.join(output_dir, 'Decay'))
-    output_dir.mkdir(parents=True)
-    output_decayed.mkdir(parents=True)
+dc_imgs = None
+dc_avr = None
+
+def main():    
 
     # get DC and OB images
     files = os.listdir(ct_dir)
