@@ -1,7 +1,7 @@
 __version__ = '0.1.0'
 
 import os
-import numpy
+import numpy as np
 import shutil
 import matplotlib
 
@@ -39,26 +39,30 @@ ct_imgs = {}
 ob_imgs = {}
 dc_imgs = {}
 
-# images as numpy arrays
+# images as np arrays
 ct_imgs_arr = {}
 ob_imgs_arr = {}
 dc_imgs_arr = {}
 ct_imgs_arr_no_dc = {}
 
-# average of all the DC samples as a numpy array
+# average of all the DC samples as a np array
 dc_avr = None
 
-# numpy array Template
+# np array Template
 array_temp = None
 
 # file names of alread processed images
 processed_files = []
 
+
 def main():    
 
     load_images()  
 
-    get_dc_average();  
+    get_dc_average()  
+
+    prev_Image = array_temp
+    prev_Image *= 0
 
     # iterate through projections
     for idx, file_name in enumerate(ct_files) :
@@ -69,29 +73,31 @@ def main():
         info = img.tag_v2
 
         # all previously decayed images summed up
-        decay_img_arr = decay()
+        decay_img_arr = prev_Image * 0.5        
         decay_img = Image.fromarray(decay_img_arr)
 
         # add decay to current image and prevent overflow
-        merged_img_arr = numpy.empty_like(decay_img_arr, dtype='uint32')
+        merged_img_arr = np.empty_like(decay_img_arr, dtype='uint32')
         merged_img_arr = ct_imgs_arr[file_name].astype('uint32') + decay_img_arr.astype('uint32')       
-        merged_img = Image.fromarray(numpy.clip(merged_img_arr, 0, 65535).astype('uint16'))
+        merged_img = Image.fromarray(np.clip(merged_img_arr, 0, 65535).astype('uint16'))
 
         # save images with tiffinfo from original image to preserve metadata
         decay_img.save(os.path.join(output_decayed, "decay_" + str(idx).zfill(4) + ".tif"), format='TIFF', tiffinfo=info)
         merged_img.save(os.path.join(output_dir, "added_" + str(idx).zfill(4) + ".tif"), format='TIFF', tiffinfo=info)
 
+        prev_Image = merged_img_arr
+
         # add image to the processed list
         processed_files.append(file_name)
 
-        print(file_name + " processed!")
-        
+        print(file_name + " processed!")        
 
     print("Finished!")
     end = time.time()
     print("Time elapsed: " + str(end - start) + " seconds . . .")
 
 
+# loads all images from the output_dir into global variables
 def load_images():
 
     # load all files
@@ -109,7 +115,7 @@ def load_images():
 
         # load images
         ob_imgs[file] = Image.open(target)
-        ob_imgs_arr[file] = numpy.array(ob_imgs[file])
+        ob_imgs_arr[file] = np.array(ob_imgs[file])
 
     # get DC images
     global dc_files
@@ -123,7 +129,7 @@ def load_images():
 
         # load images
         dc_imgs[file] = Image.open(target)
-        dc_imgs_arr[file] = numpy.array(dc_imgs[file])
+        dc_imgs_arr[file] = np.array(dc_imgs[file])
 
     # get projection images
     global ct_files
@@ -134,16 +140,16 @@ def load_images():
 
         # load images
         ct_imgs[file] = Image.open(source)
-        ct_imgs_arr[file] = numpy.array(ct_imgs[file])
+        ct_imgs_arr[file] = np.array(ct_imgs[file])
 
-        # set numpy array template
+        # set np array template
         global array_temp
-        array_temp = numpy.empty_like(ct_imgs_arr[file], dtype='uint16')
+        array_temp = np.empty_like(ct_imgs_arr[file], dtype='uint16')
 
 
-## calculates the average DC image as a numpy array from the dc samples
+## calculates the average DC image as a np array from the dc samples
 def get_dc_average():
-
+#    dc_avg = arr.mean(axis=0)
     sum = array_temp
     sum *= 0
 
@@ -157,19 +163,21 @@ def get_dc_average():
         ct_imgs_arr_no_dc[name] = arr - dc_avr
 
 
-## sums up and returns the renmants of the decayed afterimages in a numpy array
+## sums up and returns the renmants of the decayed afterimages in a np array
 def decay():
 
     sum_decayed = array_temp
     sum_decayed *= 0
+    # sum_decayed = np.zeros(array_temp.shape)
+    # img_count = len(processed_files)
 
-    img_count = len(processed_files)
+    # for idx, image_name in reversed(list(enumerate(processed_files))):
+    #     # TODO: replace with actual decay function 
+    #     # using an increasing index instead of a time based function 
+    #     # sum_decayed += (ct_imgs_arr[image_name]) // (20 * (img_count - idx)) 
+    #     sum_decayed += ct_imgs_arr_no_dc[image_name] // (3 * (img_count - idx)) 
 
-    for idx, image_name in reversed(list(enumerate(processed_files))):
-        # TODO: replace with actual decay function 
-        # using an increasing index instead of a time based function 
-        # sum_decayed += (ct_imgs_arr[image_name]) // (20 * (img_count - idx)) 
-        sum_decayed += ct_imgs_arr_no_dc[image_name] // (3 * (img_count - idx)) 
+
 
     return sum_decayed
 
