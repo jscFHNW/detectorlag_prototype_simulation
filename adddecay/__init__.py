@@ -3,7 +3,7 @@ __version__ = '0.1.0'
 import os
 import numpy as np
 import shutil
-from subprocess import call
+from subprocess import call, Popen
 from math import fmod
 from PIL import Image
 from pathlib import Path
@@ -21,7 +21,7 @@ prefix_merged='merged_'
 recon_filemask = prefix_merged + '####.tif'
 
 # coefficiant range
-range_start = 0.1
+range_start = 0.0
 range_end = 0.5
 range_step = 0.1
 
@@ -57,10 +57,6 @@ dc_avr = None
 # np array Template
 array_temp = None
 
-# file names of alread processed images
-processed_files = []
-
-
 def main():
 
     load_images()
@@ -86,7 +82,6 @@ def main():
             decay_img_arr = (prev_Image - dc_avr) * decay_coefficiant
 
             # add decay to current image and prevent overflow
-            #merged_img_arr = np.empty_like(decay_img_arr, dtype='uint32')
             merged_img_arr = ct_imgs_arr[file_name].astype('uint32') + decay_img_arr.astype('uint32')       
             merged_img = Image.fromarray(np.clip(merged_img_arr, 0, 65535).astype('uint16'))
 
@@ -94,9 +89,6 @@ def main():
             merged_img.save(os.path.join(coef_output_dir , prefix_merged + str(idx).zfill(4) + ".tif"), format='TIFF', tiffinfo=info)
 
             prev_Image = merged_img_arr
-
-            # add image to the processed list
-            processed_files.append(file_name)
 
         print(f"Coefficient {round(decay_coefficiant, 1)} processed!")
 
@@ -110,6 +102,7 @@ def main():
 def recon():
 
     recon_dir = os.path.join(output_dir, "Recon")
+    muhrec_instances = []
 
     for decay_coefficiant in range_span :
 
@@ -138,7 +131,17 @@ def recon():
         matrix_path="matrix:path=" + coef_output_dir
 
         # call the reconstruction
-        call([muhrec, "-f", cfgpath, file_mask, matrix_path])
+        # call([muhrec, "-f", cfgpath, file_mask, matrix_path])
+        muhrec_instances.append(Popen([muhrec, "-f", cfgpath, file_mask, matrix_path]))
+    
+    # wait for all instances to be finished
+    finished = False
+    while(finished == False):
+        finished = True
+        for p in muhrec_instances:
+            if p.poll() == None:
+                finished = False
+        time.sleep(0.05)
 
 
 
@@ -197,9 +200,9 @@ def load_images():
         global array_temp
         array_temp = np.empty_like(ct_imgs_arr[file], dtype='uint16')
 
-## calculates the average DC image as a np array from the dc samples
+# calculates the average DC image as a np array from the dc samples
 def get_dc_average():
-#    dc_avg = arr.mean(axis=0)
+    #dc_avg = arr.mean(axis=0)
     sum = array_temp
     sum *= 0
 
