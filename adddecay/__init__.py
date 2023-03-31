@@ -3,10 +3,9 @@ __version__ = '0.1.0'
 import os
 import numpy as np
 import shutil
-import matplotlib
-
-from PIL import Image, ImageOps
-
+from subprocess import call
+from math import fmod
+from PIL import Image
 from pathlib import Path
 from datetime import datetime
 import time
@@ -17,11 +16,16 @@ start = time.time()
 prefix_ct = 'wood_'
 prefix_dc = 'dc_'
 prefix_ob = 'ob_'
+prefix_merged='merged_'
+
+recon_filemask = prefix_merged + '####.tif'
 
 # coefficiant range
 range_start = 0.1
 range_end = 0.5
 range_step = 0.1
+
+range_span = np.arange(range_start, range_end + range_step, range_step)
 
 ct_dir = 'C:\\Users\\Jonathan Schaffner\\FHNW_Projct\\IP5\\SampleData\\Wood\\projections'
 output_base_dir = 'C:\\Users\Jonathan Schaffner\\FHNW_Projct\\IP5\\GeneratedData'
@@ -29,9 +33,7 @@ output_base_dir = 'C:\\Users\Jonathan Schaffner\\FHNW_Projct\\IP5\\GeneratedData
 # setup directories and filenames
 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 output_dir = Path(os.path.join(output_base_dir, 'AddDecay', timestamp))
-output_decayed = Path(os.path.join(output_dir, 'Decay'))
 output_dir.mkdir(parents=True)
-output_decayed.mkdir(parents=True)
 
 # file name of the images
 ct_files = []
@@ -59,16 +61,16 @@ array_temp = None
 processed_files = []
 
 
-def main():    
+def main():
 
-    load_images()  
+    load_images()
 
-    get_dc_average()  
+    get_dc_average()
 
     prev_Image = np.zeros_like(array_temp)
 
     # iterate over specified coefficiant range
-    for decay_coefficiant in np.arange(range_start, range_end + range_step, range_step) :
+    for decay_coefficiant in range_span:
 
         coef_output_dir = os.path.join(output_dir, str(round(decay_coefficiant, 1)))
 
@@ -89,18 +91,55 @@ def main():
             merged_img = Image.fromarray(np.clip(merged_img_arr, 0, 65535).astype('uint16'))
 
             # save image with tiffinfo from original image to preserve metadata
-            merged_img.save(os.path.join(coef_output_dir , "added_" + str(idx).zfill(4) + ".tif"), format='TIFF', tiffinfo=info)
+            merged_img.save(os.path.join(coef_output_dir , prefix_merged + str(idx).zfill(4) + ".tif"), format='TIFF', tiffinfo=info)
 
             prev_Image = merged_img_arr
 
             # add image to the processed list
             processed_files.append(file_name)
 
-        print(f"Coefficient {round(decay_coefficiant, 1)} processed!")        
+        print(f"Coefficient {round(decay_coefficiant, 1)} processed!")
 
+    recon()
     print("Finished!")
     end = time.time()
     print("Time elapsed: " + str(end - start) + " seconds . . .")
+
+
+# reconstruct using MuhRec with CLI params
+def recon():
+
+    recon_dir = os.path.join(output_dir, "Recon")
+
+    for decay_coefficiant in range_span :
+
+        print(f"Starting reconstruction for coefficiant {str(round(decay_coefficiant, 1))}")
+
+        coef_input_dir = os.path.join(output_dir, str(round(decay_coefficiant, 1)))
+        coef_input_mask = os.path.join(coef_input_dir, recon_filemask)
+        coef_output_dir = os.path.join(recon_dir, str(round(decay_coefficiant, 1)))
+
+        Path(coef_output_dir).mkdir(parents=True)
+
+        # path to the application
+        muhrec="C:\\Users\\Jonathan Schaffner\\FHNW_Projct\\IP5\\muhrec\\MuhRec.exe"
+        cfgpath="C:\\Users\\Jonathan Schaffner\\FHNW_Projct\\IP5\\woodRecon.xml"
+
+        # first_slice=350
+        # last_slice=450
+        
+        # # select projection sub set
+        # first_index="projections:firstindex="+str(first_slice)
+        # last_index="projections:lastindex="+str(last_slice)
+
+        file_mask="projections:filemask=" + coef_input_mask
+
+        # set output path for the matrix
+        matrix_path="matrix:path=" + coef_output_dir
+
+        # call the reconstruction
+        call([muhrec, "-f", cfgpath, file_mask, matrix_path])
+
 
 
 # loads all images from the output_dir into global variables
@@ -114,7 +153,7 @@ def load_images():
     ob_files = list(filter(lambda x: x.startswith(prefix_ob), all_files))
 
     # Copy to subfolder for each coefficiant    
-    for decay_coefficiant in np.arange(range_start, range_end + range_step, range_step) :
+    for decay_coefficiant in range_span :
 
         coeff_dir = os.path.join(output_dir, str(round(decay_coefficiant,1)))
         os.mkdir(coeff_dir)
