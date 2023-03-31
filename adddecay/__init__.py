@@ -21,8 +21,8 @@ prefix_merged='merged_'
 recon_filemask = prefix_merged + '####.tif'
 
 # coefficiant range
-range_start = 0.0
-range_end = 0.5
+range_start = 0.4
+range_end = 0.8
 range_step = 0.1
 
 range_span = np.arange(range_start, range_end + range_step, range_step)
@@ -33,7 +33,15 @@ output_base_dir = 'C:\\Users\Jonathan Schaffner\\FHNW_Projct\\IP5\\GeneratedData
 # setup directories and filenames
 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 output_dir = Path(os.path.join(output_base_dir, 'AddDecay', timestamp))
-output_dir.mkdir(parents=True)
+scans_dir = Path(os.path.join(output_dir, 'Scans'))
+recon_dir = Path(os.path.join(output_dir, 'Recon'))
+
+# Create empty directoris
+for decay_coefficiant in range_span :
+    sub_dir = Path(os.path.join(scans_dir, str(round(decay_coefficiant,1))))
+    sub_dir.mkdir(parents=True)
+    sub_dir = Path(os.path.join(recon_dir, str(round(decay_coefficiant,1))))
+    sub_dir.mkdir(parents=True)
 
 # file name of the images
 ct_files = []
@@ -49,6 +57,7 @@ dc_imgs = {}
 ct_imgs_arr = {}
 ob_imgs_arr = {}
 dc_imgs_arr = {}
+dc_arr = np.array([])
 ct_imgs_arr_no_dc = {}
 
 # average of all the DC samples as a np array
@@ -61,14 +70,15 @@ def main():
 
     load_images()
 
-    get_dc_average()
-
-    prev_Image = np.zeros_like(array_temp)
+    get_dc_average()    
 
     # iterate over specified coefficiant range
     for decay_coefficiant in range_span:
 
-        coef_output_dir = os.path.join(output_dir, str(round(decay_coefficiant, 1)))
+        coef_output_dir = os.path.join(scans_dir, str(round(decay_coefficiant, 1)))
+
+        # set/reset prev_image
+        prev_Image = dc_avr
 
     # iterate through projections
         for idx, file_name in enumerate(ct_files) :
@@ -82,7 +92,7 @@ def main():
             decay_img_arr = (prev_Image - dc_avr) * decay_coefficiant
 
             # add decay to current image and prevent overflow
-            merged_img_arr = ct_imgs_arr[file_name].astype('uint32') + decay_img_arr.astype('uint32')       
+            merged_img_arr = ct_imgs_arr[file_name].astype('uint32') + decay_img_arr.astype('uint32')
             merged_img = Image.fromarray(np.clip(merged_img_arr, 0, 65535).astype('uint16'))
 
             # save image with tiffinfo from original image to preserve metadata
@@ -101,18 +111,15 @@ def main():
 # reconstruct using MuhRec with CLI params
 def recon():
 
-    recon_dir = os.path.join(output_dir, "Recon")
     muhrec_instances = []
 
     for decay_coefficiant in range_span :
 
         print(f"Starting reconstruction for coefficiant {str(round(decay_coefficiant, 1))}")
 
-        coef_input_dir = os.path.join(output_dir, str(round(decay_coefficiant, 1)))
+        coef_input_dir = os.path.join(scans_dir, str(round(decay_coefficiant, 1)))
         coef_input_mask = os.path.join(coef_input_dir, recon_filemask)
         coef_output_dir = os.path.join(recon_dir, str(round(decay_coefficiant, 1)))
-
-        Path(coef_output_dir).mkdir(parents=True)
 
         # path to the application
         muhrec="C:\\Users\\Jonathan Schaffner\\FHNW_Projct\\IP5\\muhrec\\MuhRec.exe"
@@ -125,6 +132,7 @@ def recon():
         # first_index="projections:firstindex="+str(first_slice)
         # last_index="projections:lastindex="+str(last_slice)
 
+        # set file mask for projections
         file_mask="projections:filemask=" + coef_input_mask
 
         # set output path for the matrix
@@ -155,39 +163,46 @@ def load_images():
     global ob_files
     ob_files = list(filter(lambda x: x.startswith(prefix_ob), all_files))
 
-    # Copy to subfolder for each coefficiant    
-    for decay_coefficiant in range_span :
-
-        coeff_dir = os.path.join(output_dir, str(round(decay_coefficiant,1)))
-        os.mkdir(coeff_dir)
-
-        # copy OB images
-        for file in ob_files :
-            source = os.path.join(ct_dir, file)
-            target = os.path.join(coeff_dir, file)            
-            shutil.copyfile(source, target)
-
-            # load images
-            ob_imgs[file] = Image.open(source)
-            ob_imgs_arr[file] = np.array(ob_imgs[file])
-
-        # get DC images
-        global dc_files
-        dc_files += list(filter(lambda x: x.startswith(prefix_dc), all_files))
-
-        # copy DC images
-        for file in dc_files :
-            source = os.path.join(ct_dir, file)
-            target = os.path.join(coeff_dir, file)
-            shutil.copyfile(source, target)
-
-            # load images
-            dc_imgs[file] = Image.open(source)
-            dc_imgs_arr[file] = np.array(dc_imgs[file])
+    # get DC images
+    global dc_files
+    dc_files = list(filter(lambda x: x.startswith(prefix_dc), all_files))
 
     # get projection images
     global ct_files
     ct_files += list(filter(lambda x: x.startswith(prefix_ct), all_files))
+
+    # copy DC images
+    for file in dc_files :
+        source = os.path.join(ct_dir, file)
+
+        # load images
+        dc_imgs[file] = Image.open(source)
+        dc_imgs_arr[file] = np.array(dc_imgs[file])
+        ##np.insert(dc_arr, np.array(dc_imgs[file]))
+
+        # Copy to subfolder for each coefficiant
+        for decay_coefficiant in range_span :
+
+            coeff_dir = Path(os.path.join(scans_dir, str(round(decay_coefficiant,1))))
+            
+            target = os.path.join(coeff_dir, file)
+            shutil.copyfile(source, target)
+
+    # copy OB images
+    for file in ob_files :
+        source = os.path.join(ct_dir, file)
+
+        # load images
+        ob_imgs[file] = Image.open(source)
+        ob_imgs_arr[file] = np.array(ob_imgs[file])
+
+        # Copy to subfolder for each coefficiant
+        for decay_coefficiant in range_span :
+
+            coeff_dir = Path(os.path.join(scans_dir, str(round(decay_coefficiant,1))))
+            
+            target = os.path.join(coeff_dir, file)
+            shutil.copyfile(source, target)
 
     for file in ct_files :
         source = os.path.join(ct_dir, file)
@@ -202,9 +217,8 @@ def load_images():
 
 # calculates the average DC image as a np array from the dc samples
 def get_dc_average():
-    #dc_avg = arr.mean(axis=0)
-    sum = array_temp
-    sum *= 0
+    
+    sum = np.zeros_like(array_temp)
 
     for name, arr in dc_imgs_arr.items() :
         sum += arr
@@ -214,7 +228,6 @@ def get_dc_average():
 
     for name, arr in ct_imgs_arr.items() : 
         ct_imgs_arr_no_dc[name] = arr - dc_avr
-
 
 if __name__ == "__main__":
     main()
