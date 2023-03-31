@@ -4,7 +4,6 @@ import os
 import numpy as np
 import shutil
 from subprocess import call, Popen
-from math import fmod
 from PIL import Image
 from pathlib import Path
 from datetime import datetime
@@ -21,7 +20,7 @@ prefix_merged='merged_'
 recon_filemask = prefix_merged + '####.tif'
 
 # coefficiant range
-range_start = 0.4
+range_start = 0.0
 range_end = 0.8
 range_step = 0.1
 
@@ -38,9 +37,9 @@ recon_dir = Path(os.path.join(output_dir, 'Recon'))
 
 # Create empty directoris
 for decay_coefficiant in range_span :
-    sub_dir = Path(os.path.join(scans_dir, str(round(decay_coefficiant,1))))
+    sub_dir = Path(os.path.join(scans_dir, str(round(decay_coefficiant,2))))
     sub_dir.mkdir(parents=True)
-    sub_dir = Path(os.path.join(recon_dir, str(round(decay_coefficiant,1))))
+    sub_dir = Path(os.path.join(recon_dir, str(round(decay_coefficiant,2))))
     sub_dir.mkdir(parents=True)
 
 # file name of the images
@@ -58,7 +57,8 @@ ct_imgs_arr = {}
 ob_imgs_arr = {}
 dc_imgs_arr = {}
 dc_arr = np.array([])
-ct_imgs_arr_no_dc = {}
+
+muhrec_instances = []
 
 # average of all the DC samples as a np array
 dc_avr = None
@@ -70,15 +70,17 @@ def main():
 
     load_images()
 
-    get_dc_average()    
+    get_dc_average()
 
     # iterate over specified coefficiant range
     for decay_coefficiant in range_span:
 
-        coef_output_dir = os.path.join(scans_dir, str(round(decay_coefficiant, 1)))
+        coef_output_dir = os.path.join(scans_dir, str(round(decay_coefficiant, 2)))
 
         # set/reset prev_image
         prev_Image = dc_avr
+
+        print(f"Processing images with coefficient {round(decay_coefficiant, 2)}!")
 
     # iterate through projections
         for idx, file_name in enumerate(ct_files) :
@@ -100,48 +102,8 @@ def main():
 
             prev_Image = merged_img_arr
 
-        print(f"Coefficient {round(decay_coefficiant, 1)} processed!")
+        recon(decay_coefficiant)
 
-    recon()
-    print("Finished!")
-    end = time.time()
-    print("Time elapsed: " + str(end - start) + " seconds . . .")
-
-
-# reconstruct using MuhRec with CLI params
-def recon():
-
-    muhrec_instances = []
-
-    for decay_coefficiant in range_span :
-
-        print(f"Starting reconstruction for coefficiant {str(round(decay_coefficiant, 1))}")
-
-        coef_input_dir = os.path.join(scans_dir, str(round(decay_coefficiant, 1)))
-        coef_input_mask = os.path.join(coef_input_dir, recon_filemask)
-        coef_output_dir = os.path.join(recon_dir, str(round(decay_coefficiant, 1)))
-
-        # path to the application
-        muhrec="C:\\Users\\Jonathan Schaffner\\FHNW_Projct\\IP5\\muhrec\\MuhRec.exe"
-        cfgpath="C:\\Users\\Jonathan Schaffner\\FHNW_Projct\\IP5\\woodRecon.xml"
-
-        # first_slice=350
-        # last_slice=450
-        
-        # # select projection sub set
-        # first_index="projections:firstindex="+str(first_slice)
-        # last_index="projections:lastindex="+str(last_slice)
-
-        # set file mask for projections
-        file_mask="projections:filemask=" + coef_input_mask
-
-        # set output path for the matrix
-        matrix_path="matrix:path=" + coef_output_dir
-
-        # call the reconstruction
-        # call([muhrec, "-f", cfgpath, file_mask, matrix_path])
-        muhrec_instances.append(Popen([muhrec, "-f", cfgpath, file_mask, matrix_path]))
-    
     # wait for all instances to be finished
     finished = False
     while(finished == False):
@@ -150,6 +112,41 @@ def recon():
             if p.poll() == None:
                 finished = False
         time.sleep(0.05)
+
+    print("Finished!")
+    end = time.time()
+    print("Time elapsed: " + str(end - start) + " seconds . . .")
+
+
+# reconstruct using MuhRec with CLI params
+def recon(decay_coefficiant):
+
+    print(f"Starting reconstruction for coefficiant {str(round(decay_coefficiant, 2))}")
+
+    coef_input_dir = os.path.join(scans_dir, str(round(decay_coefficiant, 2)))
+    coef_input_mask = os.path.join(coef_input_dir, recon_filemask)
+    coef_output_dir = os.path.join(recon_dir, str(round(decay_coefficiant, 2)))
+
+    # path to the application
+    muhrec="C:\\Users\\Jonathan Schaffner\\FHNW_Projct\\IP5\\muhrec\\MuhRec.exe"
+    cfgpath="C:\\Users\\Jonathan Schaffner\\FHNW_Projct\\IP5\\woodRecon.xml"
+
+    # first_slice=350
+    # last_slice=450
+    
+    # # select projection sub set
+    # first_index="projections:firstindex="+str(first_slice)
+    # last_index="projections:lastindex="+str(last_slice)
+
+    # set file mask for projections
+    file_mask="projections:filemask=" + coef_input_mask
+
+    # set output path for the matrix
+    matrix_path="matrix:path=" + coef_output_dir
+
+    # call the reconstruction
+    # call([muhrec, "-f", cfgpath, file_mask, matrix_path])
+    muhrec_instances.append(Popen([muhrec, "-f", cfgpath, file_mask, matrix_path]))
 
 
 
@@ -183,7 +180,7 @@ def load_images():
         # Copy to subfolder for each coefficiant
         for decay_coefficiant in range_span :
 
-            coeff_dir = Path(os.path.join(scans_dir, str(round(decay_coefficiant,1))))
+            coeff_dir = Path(os.path.join(scans_dir, str(round(decay_coefficiant,2))))
             
             target = os.path.join(coeff_dir, file)
             shutil.copyfile(source, target)
@@ -199,7 +196,7 @@ def load_images():
         # Copy to subfolder for each coefficiant
         for decay_coefficiant in range_span :
 
-            coeff_dir = Path(os.path.join(scans_dir, str(round(decay_coefficiant,1))))
+            coeff_dir = Path(os.path.join(scans_dir, str(round(decay_coefficiant,2))))
             
             target = os.path.join(coeff_dir, file)
             shutil.copyfile(source, target)
@@ -225,9 +222,6 @@ def get_dc_average():
 
     global dc_avr
     dc_avr =  sum // len(dc_imgs_arr)   
-
-    for name, arr in ct_imgs_arr.items() : 
-        ct_imgs_arr_no_dc[name] = arr - dc_avr
 
 if __name__ == "__main__":
     main()
