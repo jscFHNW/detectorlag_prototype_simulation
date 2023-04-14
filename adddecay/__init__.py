@@ -11,7 +11,7 @@ import time
 
 start = time.time()
 
-# TODO: pass as command line arguments
+# TODO: pass as command line arguments ?
 
 # Image file name properties
 postfix = '####.tif'
@@ -82,13 +82,15 @@ def main():
 
     # iterate over specified coefficiant range
     for decay_coefficiant in range_span:
+        
+        coef_label = str(round(decay_coefficiant, 2))
 
-        coef_output_dir = os.path.join(scans_dir, str(round(decay_coefficiant, 2)))
+        coef_output_dir = os.path.join(scans_dir, coef_label)
 
         # set/reset prev_image
         prev_Image = dc_avr
 
-        print(f"Processing images with coefficient {round(decay_coefficiant, 2)}!")
+        print(f"Processing images with coefficient {coef_label}!")
 
         # iterate through projections
         for idx, file_name in enumerate(ct_files) :
@@ -130,11 +132,13 @@ def main():
 # reconstruct using MuhRec with CLI params
 def recon(decay_coefficiant):
 
-    print(f"Starting reconstruction for coefficiant {str(round(decay_coefficiant, 2))}")
+    coef_label = str(round(decay_coefficiant, 2))
 
-    coef_input_dir = os.path.join(scans_dir, str(round(decay_coefficiant, 2)))
+    print(f"Starting reconstruction for coefficiant {coef_label}")
+
+    coef_input_dir = os.path.join(scans_dir, coef_label)
     coef_input_mask = os.path.join(coef_input_dir, recon_filemask)
-    coef_output_dir = os.path.join(recon_dir, str(round(decay_coefficiant, 2)))
+    coef_output_dir = os.path.join(recon_dir, coef_label)
 
     # Additional config
     # first_slice=350
@@ -146,6 +150,8 @@ def recon(decay_coefficiant):
 
     # set file mask for projections
     file_mask="projections:filemask=" + coef_input_mask
+
+    # recon_slices = "projections:roi=" +
 
     # set output path for the matrix
     matrix_path="matrix:path=" + coef_output_dir
