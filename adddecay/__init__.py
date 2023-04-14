@@ -12,12 +12,15 @@ import time
 start = time.time()
 
 # TODO: pass as command line arguments
+
+# Image file name properties
+postfix = '####.tif'
 prefix_ct = 'wood_'
 prefix_dc = 'dc_'
 prefix_ob = 'ob_'
 prefix_merged='merged_'
-
-recon_filemask = prefix_merged + '####.tif'
+recon_filemask = prefix_merged + postfix
+number_fill = postfix.count('#')
 
 # coefficiant range
 range_start = 0.0
@@ -103,7 +106,7 @@ def main():
             merged_img = Image.fromarray(np.clip(merged_img_arr, 0, 65535).astype('uint16'))
 
             # save image with tiffinfo from original image to preserve metadata
-            merged_img.save(os.path.join(coef_output_dir , prefix_merged + str(idx).zfill(4) + ".tif"), format='TIFF', tiffinfo=info)
+            merged_img.save(os.path.join(coef_output_dir , prefix_merged + str(idx).zfill(number_fill) + ".tif"), format='TIFF', tiffinfo=info)
 
             prev_Image = merged_img_arr
 
@@ -217,13 +220,8 @@ def load_images():
 # calculates the average DC image as a np array from the dc samples
 def get_dc_average():
     
-    sum = np.zeros_like(array_temp)
-
-    for name, arr in dc_imgs_arr.items() :
-        sum += arr
-
     global dc_avr
-    dc_avr =  sum // len(dc_imgs_arr)   
+    dc_avr = np.mean(list(dc_imgs_arr.values()), axis=0)
 
 if __name__ == "__main__":
     main()
