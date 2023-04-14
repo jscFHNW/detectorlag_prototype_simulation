@@ -39,7 +39,7 @@ cfgpath="C:\\Users\\Jonathan Schaffner\\FHNW_Projct\\IP5\\woodRecon.xml"
 
 # setup directories and filenames
 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-output_dir = Path(os.path.join(output_base_dir, 'AddDecay', timestamp))
+output_dir = Path(os.path.join(output_base_dir, 'AddDecay', timestamp + '__' + prefix_ct))
 scans_dir = Path(os.path.join(output_dir, 'Scans'))
 recon_dir = Path(os.path.join(output_dir, 'Recon'))
 
@@ -90,7 +90,7 @@ def main():
 
         print(f"Processing images with coefficient {round(decay_coefficiant, 2)}!")
 
-    # iterate through projections
+        # iterate through projections
         for idx, file_name in enumerate(ct_files) :
 
             img = ct_imgs[file_name]
