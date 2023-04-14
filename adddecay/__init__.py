@@ -178,7 +178,6 @@ def load_images():
         # load images
         dc_imgs[file] = Image.open(source)
         dc_imgs_arr[file] = np.array(dc_imgs[file])
-        ##np.insert(dc_arr, np.array(dc_imgs[file]))
 
         # Copy to subfolder for each coefficiant
         for decay_coefficiant in range_span :
