@@ -26,8 +26,13 @@ range_step = 0.1
 
 range_span = np.arange(range_start, range_end + range_step, range_step)
 
+# Directories
 ct_dir = 'C:\\Users\\Jonathan Schaffner\\FHNW_Projct\\IP5\\SampleData\\Wood\\projections'
 output_base_dir = 'C:\\Users\Jonathan Schaffner\\FHNW_Projct\\IP5\\GeneratedData'
+
+# MuhRec config
+muhrec="C:\\Users\\Jonathan Schaffner\\FHNW_Projct\\IP5\\muhrec\\MuhRec.exe"
+cfgpath="C:\\Users\\Jonathan Schaffner\\FHNW_Projct\\IP5\\woodRecon.xml"
 
 # setup directories and filenames
 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -105,6 +110,7 @@ def main():
         recon(decay_coefficiant)
 
     # wait for all instances to be finished
+    print("Waitung for reconstructions to finish . . .")
     finished = False
     while(finished == False):
         finished = True
@@ -127,10 +133,7 @@ def recon(decay_coefficiant):
     coef_input_mask = os.path.join(coef_input_dir, recon_filemask)
     coef_output_dir = os.path.join(recon_dir, str(round(decay_coefficiant, 2)))
 
-    # path to the application
-    muhrec="C:\\Users\\Jonathan Schaffner\\FHNW_Projct\\IP5\\muhrec\\MuhRec.exe"
-    cfgpath="C:\\Users\\Jonathan Schaffner\\FHNW_Projct\\IP5\\woodRecon.xml"
-
+    # Additional config
     # first_slice=350
     # last_slice=450
     
