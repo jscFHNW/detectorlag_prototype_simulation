@@ -11,7 +11,18 @@ import time
 
 start = time.time()
 
-# TODO: pass as command line arguments ?
+# coefficiant range
+range_start = 0.0
+range_end = 0.5
+range_step = 0.05
+
+# Directories
+ct_dir = 'C:\\Users\\Jonathan Schaffner\\FHNW_Projct\\IP5\\SampleData\\Wood\\projections'
+output_base_dir = 'C:\\Users\Jonathan Schaffner\\FHNW_Projct\\IP5\\GeneratedData'
+
+# MuhRec config
+muhrec="C:\\Users\\Jonathan Schaffner\\FHNW_Projct\\IP5\\muhrec\\MuhRec.exe"
+cfgpath="C:\\Users\\Jonathan Schaffner\\FHNW_Projct\\IP5\\woodRecon.xml"
 
 # Image file name properties
 postfix = '####.tif'
@@ -22,26 +33,14 @@ prefix_merged='merged_'
 recon_filemask = prefix_merged + postfix
 number_fill = postfix.count('#')
 
-# coefficiant range
-range_start = 0.0
-range_end = 0.8
-range_step = 0.1
-
-range_span = np.arange(range_start, range_end + range_step, range_step)
-
-# Directories
-ct_dir = 'C:\\Users\\Jonathan Schaffner\\FHNW_Projct\\IP5\\SampleData\\Wood\\projections'
-output_base_dir = 'C:\\Users\Jonathan Schaffner\\FHNW_Projct\\IP5\\GeneratedData'
-
-# MuhRec config
-muhrec="C:\\Users\\Jonathan Schaffner\\FHNW_Projct\\IP5\\muhrec\\MuhRec.exe"
-cfgpath="C:\\Users\\Jonathan Schaffner\\FHNW_Projct\\IP5\\woodRecon.xml"
-
 # setup directories and filenames
 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 output_dir = Path(os.path.join(output_base_dir, 'AddDecay', timestamp + '__' + prefix_ct))
 scans_dir = Path(os.path.join(output_dir, 'Scans'))
 recon_dir = Path(os.path.join(output_dir, 'Recon'))
+
+# Create range including range_end
+range_span = np.arange(range_start, range_end + range_step, range_step)
 
 # Create empty directoris
 for decay_coefficiant in range_span :
@@ -68,24 +67,19 @@ dc_arr = np.array([])
 
 muhrec_instances = []
 
-# average of all the DC samples as a np array
-dc_avr = None
-
-# np array Template
-array_temp = None
-
 def main():
 
     load_images()
 
-    get_dc_average()
+    # get average
+    dc_avr = np.mean(list(dc_imgs_arr.values()), axis=0)
 
     # iterate over specified coefficiant range
     for decay_coefficiant in range_span:
         
         coef_label = str(round(decay_coefficiant, 2))
 
-        coef_output_dir = os.path.join(scans_dir, coef_label)
+        coef_output_dir = os.path.join(scans_dir, coef_label)        
 
         # set/reset prev_image
         prev_Image = dc_avr
@@ -136,8 +130,7 @@ def recon(decay_coefficiant):
 
     print(f"Starting reconstruction for coefficiant {coef_label}")
 
-    coef_input_dir = os.path.join(scans_dir, coef_label)
-    coef_input_mask = os.path.join(coef_input_dir, recon_filemask)
+    coef_input_mask = os.path.join(scans_dir, coef_label, recon_filemask)
     coef_output_dir = os.path.join(recon_dir, coef_label)
 
     # Additional config
@@ -218,16 +211,6 @@ def load_images():
         # load images
         ct_imgs[file] = Image.open(source)
         ct_imgs_arr[file] = np.array(ct_imgs[file])
-
-        # set np array template
-        global array_temp
-        array_temp = np.empty_like(ct_imgs_arr[file], dtype='uint16')
-
-# calculates the average DC image as a np array from the dc samples
-def get_dc_average():
-    
-    global dc_avr
-    dc_avr = np.mean(list(dc_imgs_arr.values()), axis=0)
 
 if __name__ == "__main__":
     main()
